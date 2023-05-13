@@ -1,45 +1,61 @@
+import requests
 import networkx as nx
+import matplotlib.pyplot as plt
 
-# Step 1: Data Collection
-# Assuming you have collected the necessary data and stored it in a suitable format
+endpoint = 'https://restcountries.com/v2/all'
 
-# Step 2: Building the Graph
-# Create an empty graph
-graph = nx.Graph()
+response = requests.get(endpoint)
+data = response.json()
 
-# Add nodes to the graph
-# Assuming you have a list of web pages stored in the variable 'web_pages'
-graph.add_nodes_from(routes.txt)
+countries = []
+for country in data:
+    name = country.get('name', 'N/A')
+    population = country.get('population', 'N/A')
+    capital = country.get('capital', 'N/A')
+    currencies = country.get('currencies', [])
+    languages = country.get('languages', [])
 
-# Add edges to the graph based on the links between web pages
-# Assuming you have a list of tuples representing links between web pages stored in the variable 'links'
-graph.add_edges_from(links)
+    countries.append({
+        'name': name,
+        'population': population,
+        'capital': capital,
+        'currencies': currencies,
+        'languages': languages
+    })
 
-# Step 3: Node Importance
-# Calculate the degree centrality of each node
-degree_centrality = nx.degree_centrality(graph)
+G = nx.Graph()
 
-# Calculate the betweenness centrality of each node
-betweenness_centrality = nx.betweenness_centrality(graph)
+for country in countries:
+    G.add_node(country['name'], population=country['population'], capital=country['capital'])
 
-# Calculate the PageRank of each node
-pagerank = nx.pagerank(graph)
+for i in range(len(countries)):
+    for j in range(i+1, len(countries)):
+        if any(currency in countries[j]['currencies'] for currency in countries[i]['currencies']):
+            G.add_edge(countries[i]['name'], countries[j]['name'])
+        elif any(language in countries[j]['languages'] for language in countries[i]['languages']):
+            G.add_edge(countries[i]['name'], countries[j]['name'])
 
-# Step 4: Analyzing Node Importance
-# Sort the nodes based on their centrality metrics
-sorted_nodes_by_degree = sorted(degree_centrality.items(), key=lambda x: x[1], reverse=True)
-sorted_nodes_by_betweenness = sorted(betweenness_centrality.items(), key=lambda x: x[1], reverse=True)
-sorted_nodes_by_pagerank = sorted(pagerank.items(), key=lambda x: x[1], reverse=True)
+degree_centrality = nx.degree_centrality(G)
 
-# Print the top three important nodes based on each centrality metric
-print("Top three important nodes based on degree centrality:")
-for node, centrality in sorted_nodes_by_degree[:3]:
-    print(node, centrality)
+top_nodes = sorted(degree_centrality, key=degree_centrality.get, reverse=True)[:3]
 
-print("Top three important nodes based on betweenness centrality:")
-for node, centrality in sorted_nodes_by_betweenness[:3]:
-    print(node, centrality)
+pos = nx.circular_layout(G)
 
-print("Top three important nodes based on PageRank:")
-for node, centrality in sorted_nodes_by_pagerank[:3]:
-    print(node, centrality)
+plt.figure(figsize=(12, 12))
+
+nx.draw_networkx(G, pos, node_size=300, font_size=10)
+
+important_nodes = {node: node for node in top_nodes}
+nx.draw_networkx_labels(G, pos, labels=important_nodes, font_size=12, font_weight='bold')
+
+plt.axis('off')
+
+plt.title('Web-based Network: Country Connections', fontsize=16, fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
